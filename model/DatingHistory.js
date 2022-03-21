@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
 
-const BeneficiarySchema = mongoose.Schema({
-  documentType: {
+const DatingHistorySchema = mongoose.Schema({
+  ref: {
     type: String,
     required: true,
   },
