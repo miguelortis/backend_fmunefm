@@ -205,7 +205,7 @@ app.get("/profile", checkauth, async (req, res) => {
   }
 });
 
-app.post("/fmunefm/beneficiariy/register", checkauth, async (req, res) => {
+app.post("/fmunefm/beneficiary/register", checkauth, async (req, res) => {
   ///console.log("****", req);
   const { documentType, idCard, name, lastName, relationship, sex, dateBirth } =
     req.body;
@@ -265,6 +265,22 @@ app.post("/fmunefm/beneficiariy/register", checkauth, async (req, res) => {
         .send({ success: false, error: "Llene todos los campos" });
     }
     throw error;
+  }
+});
+
+app.delete("/beneficiary/delete/:idCard", checkauth, async (req, res) => {
+  console.log(req.headers, "hola");
+  const { idCard } = req.params;
+  try {
+    console.log(`han solicitado un .DELETE para la cedula:${idCard}`);
+    const infoBorrado = await Beneficiary.find({ idCard: idCard });
+    await Beneficiary.findOneAndDelete({ idCard: idCard });
+
+    console.log(`Se ha borrado con exito la informacion ${infoBorrado}`);
+    res.status(202).end();
+  } catch (error) {
+    console.log("ha fallado el .DELETE, respondiendo con un statusCode: 400");
+    res.status(400).end();
   }
 });
 
