@@ -73,7 +73,7 @@ app.post("/fmunefm/login", async (req, res) => {
     // the username, password combination is successful
     res.json({ status: 400, error: "Contraseña incorrecta!" });
   }
-  if (user.accountVerification === false) {
+  if (user.status === false) {
     // the username, password combination is successful
     res.json({ status: 401, error: "usuario en espera por verificacion" });
   }
@@ -88,7 +88,7 @@ app.post("/fmunefm/login", async (req, res) => {
     }
   );
 
-  return res.json({ status: 202, data: token });
+  return res.json({ status: 202, data: token, role: user.role });
 
   //   res.json({ status: "error", error: "Invalid username/password" });
 });
@@ -108,6 +108,8 @@ app.post("/fmunefm/register", async (req, res) => {
     civilStatus,
     category,
     personalType,
+    phone,
+    registrationDate,
   } = req.body;
 
   if (!email || !isValidEmail(email)) {
@@ -162,6 +164,8 @@ app.post("/fmunefm/register", async (req, res) => {
       civilStatus,
       category,
       personalType,
+      phone,
+      registrationDate,
     });
     console.log("User created successfully: ", response);
   } catch (error) {
@@ -200,6 +204,22 @@ app.get("/profile", checkauth, async (req, res) => {
     );
 
     res.status(200).json(user);
+  } catch (error) {
+    return res.status(401).json({ message: "no autorizado" });
+  }
+});
+
+app.get("/fmunefm/consult", checkauth, async (req, res) => {
+  console.log(req.userData.id);
+  try {
+    const Users = await User.find().populate("beneficiaries");
+    const Beneficiaries = await Beneficiary.find().populate("userId");
+    const result = [...Users, ...Beneficiaries];
+    //const user = await User.find();
+    //console.log("***", user);
+
+    console.log("beneficiaries", result);
+    res.status(200).json(result);
   } catch (error) {
     return res.status(401).json({ message: "no autorizado" });
   }

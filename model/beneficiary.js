@@ -39,6 +39,7 @@ const BeneficiarySchema = mongoose.Schema({
   userId: {
     required: true,
     type: mongoose.Schema.Types.ObjectId,
+    ref: "user",
   },
   status: {
     required: true,

@@ -31,7 +31,7 @@ const UserSchema = mongoose.Schema({
     type: String,
     lowercase: true,
     unique: true,
-    require: true,
+    required: true,
   },
   sex: {
     type: String,
@@ -53,10 +53,11 @@ const UserSchema = mongoose.Schema({
   },
   plan: {
     type: String,
-    default: "Basico",
+    default: "BASICO",
   },
   phone: {
     type: String,
+    required: true,
   },
   role: {
     type: String,
@@ -73,7 +74,7 @@ const UserSchema = mongoose.Schema({
     default: Date.now(),
     required: true,
   },
-  accountVerification: {
+  status: {
     type: Boolean,
     default: false,
   },
