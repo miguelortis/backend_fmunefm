@@ -84,7 +84,7 @@ app.post("/fmunefm/login", async (req, res) => {
     },
     process.env.JWT_SECRET,
     {
-      expiresIn: 60 * 60 * 2, // seconds
+      expiresIn: 60 * 60 * 6, // seconds
     }
   );
 
