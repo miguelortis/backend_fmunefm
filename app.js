@@ -11,8 +11,9 @@ const _connect = require("./db/_connect");
 const { isValidEmail } = require("./helpers");
 const cors = require("cors");
 const checkauth = require("./midlewares/checkauth");
+const SocketIo = require("socket.io");
 
-const JWT_SECRET = "fMunefM-Created1995ForUniversityNationalFRanciScOdeMirand@";
+//const JWT_SECRET = "fMunefM-Created1995ForUniversityNationalFRanciScOdeMirand@";
 //Connect MONGODB
 
 // mongoose.connect("mongodb://localhost:27017/login-app-db", {
@@ -27,6 +28,38 @@ const app = express();
 //app.use("/", express.static(path.join(__dirname, "static")));
 app.use(bodyParser.json());
 app.use(cors());
+
+app.patch("/fmunefm/modify-headline", checkauth, async (req, res) => {
+  const { email, phone } = req.body;
+  //console.log(req.body);
+  //console.log(req.headers);
+  // if (!email || typeof email !== "string") {
+  //   return res.json({ status: "error", error: "Ingresa un Email" });
+  // }
+  // if (!phone || typeof phone !== "string") {
+  //   return res.json({ status: "error", error: "Ingresa un Telefono" });
+  // }
+  const emailVerify = await User.findOne({ email: email });
+  if (emailVerify) {
+    return res.json({ status: 403, error: "Este email ya existe" });
+  }
+  //console.log(req.headers.authorization);
+  try {
+    const _id = req.userData.id;
+    console.log(_id);
+    await User.updateOne(
+      { _id },
+      {
+        $set: { email: email, phone: phone },
+      }
+    );
+    res.json({ status: 201, message: "successfully" });
+  } catch (error) {
+    console.log(error);
+    res.json({ status: 400, error: ";))" });
+  }
+});
+
 app.post("/fmunefm/change-password", async (req, res) => {
   const { token, newpassword: plainTextPassword } = req.body;
 
@@ -34,10 +67,10 @@ app.post("/fmunefm/change-password", async (req, res) => {
     return res.json({ status: "error", error: "Invalid password" });
   }
 
-  if (plainTextPassword.length < 5) {
+  if (plainTextPassword.length < 8) {
     return res.json({
       status: "error",
-      error: "Password too small. Should be atleast 6 characters",
+      error: "Password too small. Should be atleast 8 characters",
     });
   }
 
@@ -54,10 +87,10 @@ app.post("/fmunefm/change-password", async (req, res) => {
         $set: { password },
       }
     );
-    res.json({ status: "ok" });
+    res.json({ status: 201, message: "successfully" });
   } catch (error) {
     console.log(error);
-    res.json({ status: "error", error: ";))" });
+    res.json({ status: 400, error: ";))" });
   }
 });
 
@@ -113,39 +146,22 @@ app.post("/fmunefm/register", async (req, res) => {
   } = req.body;
 
   if (!email || !isValidEmail(email)) {
-    return res
-      .status(400)
-      .send({ success: false, error: "introduce un Email valido" });
-  }
-
-  if (!idCard || typeof idCard !== "string") {
-    return res
-      .status(400)
-      .send({ success: false, error: "introduce una cedula valida" });
-  }
-  if (!plainTextPassword || typeof plainTextPassword !== "string") {
-    return res
-      .status(400)
-      .send({ success: false, error: "introduce una Contraseña valida" });
+    return res.json({ status: 400, error: "Introduce un Email valido" });
   }
 
   if (plainTextPassword.length < 8) {
-    return res.status(400).send({
-      success: false,
-      error: "introduce una Contraseña mayor a 8 digitos",
+    return res.json({
+      status: 400,
+      error: "Introduce una Contraseña mayor a 8 digitos",
     });
   }
   const idCardVerify = await User.findOne({ idCard: idCard });
   if (idCardVerify) {
-    return res
-      .status(400)
-      .send({ success: false, error: "Esta cedula ya existe" });
+    return res.json({ status: 400, error: "Esta cedula ya existe" });
   }
   const idEmailVerify = await User.findOne({ email: email });
   if (idEmailVerify) {
-    return res
-      .status(400)
-      .send({ success: false, error: "Este email ya existe" });
+    return res.json({ status: 400, error: "Este email ya existe" });
   }
 
   try {
@@ -167,18 +183,14 @@ app.post("/fmunefm/register", async (req, res) => {
       phone,
       registrationDate,
     });
-    console.log("User created successfully: ", response);
+    console.log("User created successfully", response);
   } catch (error) {
     if (error) {
-      return res
-        .status(400)
-        .send({ success: false, error: "Llene todos los campos" });
+      return res.json({ status: 400, error: "Llene todos los campos" });
     }
     throw error;
   }
-  return res
-    .status(201)
-    .send({ success: true, error: "User created successfully" });
+  return res.json({ status: 201, messaje: "User created successfully" });
 });
 
 app.post("/fmunefm/beneficiaries", async (req, res) => {
@@ -236,7 +248,7 @@ app.post("/fmunefm/beneficiary/register", checkauth, async (req, res) => {
   //     .send({ success: false, error: "introduce una cedula valida" });
   // }
   if (idCard === req.userData.idCard) {
-    return res.status(400).send({
+    return res.status(401).send({
       success: false,
       error: "Eres titular no te puedes agregar a tu propia carga familiar",
     });
@@ -249,7 +261,7 @@ app.post("/fmunefm/beneficiary/register", checkauth, async (req, res) => {
     });
 
     if (idCardVerify) {
-      return res.status(400).send({
+      return res.status(402).send({
         success: false,
         error: "Ya tienes Este Miembro en tu carga familiar",
       });
@@ -289,7 +301,7 @@ app.post("/fmunefm/beneficiary/register", checkauth, async (req, res) => {
 });
 
 app.delete("/beneficiary/delete/:idCard", checkauth, async (req, res) => {
-  console.log(req.headers, "hola");
+  //console.log(req.headers, "hola");
   const { idCard } = req.params;
   try {
     console.log(`han solicitado un .DELETE para la cedula:${idCard}`);
@@ -304,6 +316,18 @@ app.delete("/beneficiary/delete/:idCard", checkauth, async (req, res) => {
   }
 });
 
-app.listen(process.env.PORT, () => {
+const server = app.listen(process.env.PORT, () => {
   console.log(`Server up at ${process.env.PORT}`);
+});
+
+const io = SocketIo(server);
+
+//Funcionalidad de socket.io en el servidor
+io.on("connection", (socket) => {
+  let nombre;
+  console.log("usuario conectado");
+
+  socket.on("conectado", (socket) => {
+    console.log("usuario conec");
+  });
 });
