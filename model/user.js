@@ -65,8 +65,11 @@ const UserSchema = mongoose.Schema({
   },
   beneficiaries: [
     {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "beneficiary",
+      _id: false,
+      beneficiary: { type: mongoose.Schema.Types.ObjectId, ref: "beneficiary" },
+      relationship: {
+        type: String,
+      },
     },
   ],
   registrationDate: {

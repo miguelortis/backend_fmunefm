@@ -19,10 +19,6 @@ const BeneficiarySchema = mongoose.Schema({
     required: true,
     trim: true,
   },
-  relationship: {
-    type: String,
-    required: true,
-  },
   sex: {
     type: String,
     required: true,
@@ -36,11 +32,13 @@ const BeneficiarySchema = mongoose.Schema({
     default: Date.now(),
     required: true,
   },
-  userId: {
-    required: true,
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "user",
-  },
+  userId: [
+    {
+      required: true,
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "user",
+    },
+  ],
   status: {
     required: true,
     type: Boolean,

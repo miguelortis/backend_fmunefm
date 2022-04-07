@@ -46,7 +46,7 @@ app.patch("/fmunefm/modify-headline", checkauth, async (req, res) => {
   //console.log(req.headers.authorization);
   try {
     const _id = req.userData.id;
-    //console.log(_id);
+    console.log(_id);
     await User.updateOne(
       { _id },
       {
@@ -209,10 +209,10 @@ app.post("/fmunefm/beneficiaries", async (req, res) => {
 });
 
 app.get("/profile", checkauth, async (req, res) => {
-  //console.log(req.userData.id);
+  console.log(req.userData.id);
   try {
     const user = await User.findOne({ _id: req.userData.id }).populate(
-      "beneficiaries.beneficiary"
+      "beneficiaries"
     );
 
     res.status(200).json(user);
@@ -230,8 +230,8 @@ app.get("/fmunefm/consult", checkauth, async (req, res) => {
     //const user = await User.find();
     //console.log("***", user);
 
-    console.log("beneficiaries", { Users, Beneficiaries });
-    res.status(200).json({ Users, Beneficiaries });
+    console.log("beneficiaries", result);
+    res.status(200).json(result);
   } catch (error) {
     return res.status(401).json({ message: "no autorizado" });
   }
@@ -242,36 +242,14 @@ app.post("/fmunefm/beneficiary/register", checkauth, async (req, res) => {
   const { documentType, idCard, name, lastName, relationship, sex, dateBirth } =
     req.body;
 
-  const BeneficiaryExist = await Beneficiary.findOne({
-    idCard: idCard,
-  });
-  if (BeneficiaryExist) {
-    await Beneficiary.findByIdAndUpdate(
-      { _id: BeneficiaryExist._id },
-      {
-        $addToSet: {
-          userId: mongoose.Types.ObjectId(req.userData.id),
-        },
-      },
-      { new: true }
-    );
-    await User.findByIdAndUpdate(
-      { _id: req.userData.id },
-      {
-        $addToSet: {
-          beneficiaries: [
-            {
-              beneficiary: mongoose.Types.ObjectId(BeneficiaryExist._id),
-              relationship: relationship,
-            },
-          ],
-        },
-      },
-      { new: true }
-    );
-    return res.status(200).json(BeneficiaryExist);
-  }
-
+  //   const BeneficiaryExist = await Beneficiary.findOne({
+  //     idCard: idCard,
+  //   });
+  //  if (BeneficiaryExist) {
+  //    return res
+  //      .status(401)
+  //      .send({ success: false, error: "introduce una cedula valida" });
+  //  }
   if (idCard === req.userData.idCard) {
     return res.status(401).send({
       success: false,
@@ -296,6 +274,7 @@ app.post("/fmunefm/beneficiary/register", checkauth, async (req, res) => {
         idCard,
         name,
         lastName,
+        relationship,
         sex,
         dateBirth,
         userId: req.userData.id,
@@ -305,10 +284,7 @@ app.post("/fmunefm/beneficiary/register", checkauth, async (req, res) => {
         { _id: req.userData.id },
         {
           $addToSet: {
-            beneficiaries: {
-              beneficiary: mongoose.Types.ObjectId(response._id),
-              relationship: relationship,
-            },
+            beneficiaries: mongoose.Types.ObjectId(response._id),
           },
         },
         { new: true }
