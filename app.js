@@ -224,13 +224,13 @@ app.get("/profile", checkauth, async (req, res) => {
 app.get("/fmunefm/consult", checkauth, async (req, res) => {
   console.log(req.userData.id);
   try {
-    const Users = await User.find().populate("beneficiaries");
-    const Beneficiaries = await Beneficiary.find().populate("userId");
+    const Users = await User.find().populate("beneficiaries.beneficiary");
+    const Beneficiaries = await Beneficiary.find().populate("userId.user");
     const result = [...Users, ...Beneficiaries];
     //const user = await User.find();
     //console.log("***", user);
 
-    console.log("beneficiaries", { Users, Beneficiaries });
+    //console.log("beneficiaries", { Users, Beneficiaries });
     res.status(200).json({ Users, Beneficiaries });
   } catch (error) {
     return res.status(401).json({ message: "no autorizado" });
@@ -242,15 +242,20 @@ app.post("/fmunefm/beneficiary/register", checkauth, async (req, res) => {
   const { documentType, idCard, name, lastName, relationship, sex, dateBirth } =
     req.body;
 
-  const BeneficiaryExist = await Beneficiary.findOne({
+  const BeneficiaryVerify = await Beneficiary.findOne({
     idCard: idCard,
   });
-  if (BeneficiaryExist) {
+  if (BeneficiaryVerify) {
     await Beneficiary.findByIdAndUpdate(
-      { _id: BeneficiaryExist._id },
+      { _id: BeneficiaryVerify._id },
       {
         $addToSet: {
-          userId: mongoose.Types.ObjectId(req.userData.id),
+          userId: [
+            {
+              user: mongoose.Types.ObjectId(req.userData.id),
+              relationship: relationship,
+            },
+          ],
         },
       },
       { new: true }
@@ -261,7 +266,7 @@ app.post("/fmunefm/beneficiary/register", checkauth, async (req, res) => {
         $addToSet: {
           beneficiaries: [
             {
-              beneficiary: mongoose.Types.ObjectId(BeneficiaryExist._id),
+              beneficiary: mongoose.Types.ObjectId(BeneficiaryVerify._id),
               relationship: relationship,
             },
           ],
@@ -269,7 +274,7 @@ app.post("/fmunefm/beneficiary/register", checkauth, async (req, res) => {
       },
       { new: true }
     );
-    return res.status(200).json(BeneficiaryExist);
+    return res.status(200).json(BeneficiaryVerify);
   }
 
   if (idCard === req.userData.idCard) {
@@ -280,42 +285,45 @@ app.post("/fmunefm/beneficiary/register", checkauth, async (req, res) => {
   }
 
   try {
-    const idCardVerify = await Beneficiary.findOne({
-      userId: req.userData.id,
-      idCard: req.body.idCard,
-    });
+    // const idCardVerify = await Beneficiary.findOne({
+    //   userId: req.userData.id,
+    //   idCard: req.body.idCard,
+    // });
 
-    if (idCardVerify) {
-      return res.status(402).send({
-        success: false,
-        error: "Ya tienes Este Miembro en tu carga familiar",
-      });
-    } else {
-      const response = await Beneficiary.create({
-        documentType,
-        idCard,
-        name,
-        lastName,
-        sex,
-        dateBirth,
-        userId: req.userData.id,
-      });
-      //console.log(response);
-      await User.findByIdAndUpdate(
-        { _id: req.userData.id },
-        {
-          $addToSet: {
-            beneficiaries: {
-              beneficiary: mongoose.Types.ObjectId(response._id),
-              relationship: relationship,
-            },
+    // if (idCardVerify) {
+    //   return res.status(402).send({
+    //     success: false,
+    //     error: "Ya tienes Este Miembro en tu carga familiar",
+    //   });
+    // } else {
+    console.log("try ", req.body);
+    const response = await Beneficiary.create({
+      documentType,
+      idCard,
+      name,
+      lastName,
+      sex,
+      dateBirth,
+      userId: [{ user: req.userData.id, relationship: relationship }],
+    });
+    console.log("despues de response", response);
+    await User.findByIdAndUpdate(
+      { _id: req.userData.id },
+      {
+        $addToSet: {
+          beneficiaries: {
+            beneficiary: mongoose.Types.ObjectId(response._id),
+            relationship: relationship,
           },
         },
-        { new: true }
-      );
-      return res.status(200).json(response);
-      //console.log("User created successfully: ", response);
-    }
+      },
+      { new: true }
+    );
+    console.log("User created successfully: ", response);
+    return res
+      .status(200)
+      .json({ beneficiary: response, relationship: relationship });
+    // }
   } catch (error) {
     console.log("cath", error);
     if (error) {
