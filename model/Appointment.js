@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 
-const DatingHistorySchema = mongoose.Schema({
+const AppointmentSchema = mongoose.Schema({
   ref: {
     type: String,
     required: true,
@@ -47,6 +47,6 @@ const DatingHistorySchema = mongoose.Schema({
   },
 });
 
-const model = mongoose.model("beneficiary", BeneficiarySchema, "beneficiaries");
+const model = mongoose.model("Appointment", AppointmentSchema, "Appointments");
 
 module.exports = model;
