@@ -392,7 +392,7 @@ io.on("connection", (socket) => {
   });
 
   // registro de nueva consulta///////////////////////////////////////////////////////////////
-  socket.on("service", async (NewService) => {
+  socket.on("service", async (NewService, id) => {
     //console.log("servicio", NewService);
     const { patientIdCard, patientType, queryType, user } = NewService;
     if (user === null && patientType === "Titular") {
@@ -455,7 +455,7 @@ io.on("connection", (socket) => {
         })
           .populate("patient")
           .populate("user");
-        io.emit("services", consultations);
+        io.emit(id, consultations);
         io.emit(role, consultations);
       } catch (error) {
         console.log("cath", error);
