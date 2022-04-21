@@ -72,6 +72,12 @@ const UserSchema = mongoose.Schema({
       },
     },
   ],
+  medicalConsultations: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "MedicalConsultation",
+    },
+  ],
   registrationDate: {
     type: Date,
     default: Date.now(),

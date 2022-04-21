@@ -3,8 +3,6 @@ const express = require("express");
 require("dotenv").config();
 const path = require("path");
 const bodyParser = require("body-parser");
-const User = require("./model/user");
-const Beneficiary = require("./model/beneficiary");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const _connect = require("./db/_connect");
@@ -12,6 +10,10 @@ const { isValidEmail } = require("./helpers");
 const cors = require("cors");
 const checkauth = require("./midlewares/checkauth");
 const SocketIo = require("socket.io");
+///////import models
+const User = require("./model/user");
+const Beneficiary = require("./model/beneficiary");
+const MedicalConsultation = require("./model/MedicalConsultation");
 
 //const JWT_SECRET = "fMunefM-Created1995ForUniversityNationalFRanciScOdeMirand@";
 //Connect MONGODB
@@ -237,6 +239,25 @@ app.get("/fmunefm/consult", checkauth, async (req, res) => {
   }
 });
 
+app.get("/fmunefm/consultationspending", checkauth, async (req, res) => {
+  console.log(req.userData.id);
+  try {
+    const consultations = await MedicalConsultation.find({
+      status: "Pendiente",
+    })
+      .populate("patient")
+      .populate("user");
+
+    //const user = await User.find();
+    //console.log("***", user);
+
+    console.log("beneficiaries", consultations);
+    res.status(200).json(consultations);
+  } catch (error) {
+    return res.status(401).json({ message: "no autorizado" });
+  }
+});
+
 app.post("/fmunefm/beneficiary/register", checkauth, async (req, res) => {
   ///console.log("****", req);
   const { documentType, idCard, name, lastName, relationship, sex, dateBirth } =
@@ -365,30 +386,144 @@ io.on("connection", (socket) => {
   socket.on("connected", (hola) => {
     console.log("usuario conec", hola);
   });
+
+  // registro de nueva consulta///////////////////////////////////////////////////////////////
+  socket.on("service", async (NewService) => {
+    console.log("servicio", NewService);
+    const { patientIdCard, patientType, queryType, user } = NewService;
+    if (user === null && patientType === "Titular") {
+      const patientData = await User.findOne({
+        idCard: patientIdCard,
+      });
+      if (
+        patientIdCard === null ||
+        patientType === null ||
+        queryType === null
+      ) {
+        return socket.emit(
+          "error",
+          "No puedes realizar mas de dos consultas por año"
+        );
+      }
+      // const consultations = await MedicalConsultation.find({
+      //   idCardPatient: patientData.idCard,
+      //   user: patientData._id,
+      // });
+      // let consultationsPerYear = 0;
+      // consultations.map((el) => {
+      //   if (el.registrationDate.getFullYear() === new Date().getFullYear()) {
+      //     consultationsPerYear++;
+      //   }
+      // });
+      // console.log(consultationsPerYear);
+      // console.log(consultations.length);
+      // if (consultations.length >= 2 && consultationsPerYear >= 2) {
+      //   return socket.emit(
+      //     "services",
+      //     "No puedes realizar mas de dos consultas por año"
+      //   );
+      // }
+      try {
+        const response = await MedicalConsultation.create({
+          patient: patientData._id,
+          idCardPatient: patientData.idCard,
+          patientType,
+          queryType,
+          user: patientData._id,
+        });
+
+        await User.findByIdAndUpdate(
+          { _id: patientData._id },
+          {
+            $addToSet: {
+              medicalConsultations: mongoose.Types.ObjectId(response._id),
+            },
+          },
+          { new: true }
+        );
+        console.log("User created successfully: ", response);
+        const consultations = await MedicalConsultation.find({
+          status: "Pendiente",
+        })
+          .populate("patient")
+          .populate("user");
+        io.emit("services", consultations);
+      } catch (error) {
+        console.log("cath", error);
+        if (error) {
+          return io.emit("error", "Ocurrio un problema");
+        }
+      }
+    } else {
+      const patientData = await Beneficiary.findOne({
+        idCard: patientIdCard,
+      });
+      if (
+        patientIdCard === null ||
+        patientType === null ||
+        queryType === null ||
+        user === null
+      ) {
+        return socket.emit("error", "Faltan datos, por favor verifique");
+      }
+
+      try {
+        const response = await MedicalConsultation.create({
+          patient: patientData._id,
+          idCardPatient: patientData.idCard,
+          patientType,
+          queryType,
+          user: user,
+        });
+
+        await Beneficiary.findByIdAndUpdate(
+          { _id: patientData._id },
+          {
+            $addToSet: {
+              medicalConsultations: mongoose.Types.ObjectId(response._id),
+            },
+          },
+          { new: true }
+        );
+        console.log("User created successfully: ", response);
+        const consultations = await MedicalConsultation.find({
+          status: "Pendiente",
+        })
+          .populate("patient")
+          .populate("user");
+        io.emit("services", consultations);
+      } catch (error) {
+        console.log("cath", error);
+        if (error) {
+          return io.emit("error", "Ocurrio un problema");
+        }
+      }
+    }
+  });
+
+  //Funcionalidad de socket.io en el servidor
+  // io.on("connection", (socket) => {
+  //   let nombre;
+
+  //   socket.on("connect", (nomb) => {
+  //     nombre = nomb;
+  //     //socket.broadcast.emit manda el mensaje a todos los clientes excepto al que ha enviado el mensaje
+  //     socket.broadcast.emit("mensajes", {
+  //       nombre: nombre,
+  //       mensaje: `${nombre} ha entrado en la sala del chat`,
+  //     });
+  //   });
+
+  //   socket.on("mensaje", (nombre, mensaje) => {
+  //     //io.emit manda el mensaje a todos los clientes conectados al chat
+  //     io.emit("mensajes", { nombre, mensaje });
+  //   });
+
+  //   socket.on("disconnect", () => {
+  //     io.emit("mensajes", {
+  //       servidor: "Servidor",
+  //       mensaje: `${nombre} ha abandonado la sala`,
+  //     });
+  //   });
+  // });
 });
-
-//Funcionalidad de socket.io en el servidor
-// io.on("connection", (socket) => {
-//   let nombre;
-
-//   socket.on("connect", (nomb) => {
-//     nombre = nomb;
-//     //socket.broadcast.emit manda el mensaje a todos los clientes excepto al que ha enviado el mensaje
-//     socket.broadcast.emit("mensajes", {
-//       nombre: nombre,
-//       mensaje: `${nombre} ha entrado en la sala del chat`,
-//     });
-//   });
-
-//   socket.on("mensaje", (nombre, mensaje) => {
-//     //io.emit manda el mensaje a todos los clientes conectados al chat
-//     io.emit("mensajes", { nombre, mensaje });
-//   });
-
-//   socket.on("disconnect", () => {
-//     io.emit("mensajes", {
-//       servidor: "Servidor",
-//       mensaje: `${nombre} ha abandonado la sala`,
-//     });
-//   });
-// });

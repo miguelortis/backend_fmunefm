@@ -41,6 +41,12 @@ const BeneficiarySchema = mongoose.Schema({
       },
     },
   ],
+  medicalConsultations: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "MedicalConsultation",
+    },
+  ],
   status: {
     required: true,
     type: Boolean,
