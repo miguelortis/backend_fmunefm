@@ -392,7 +392,7 @@ io.on("connection", (socket) => {
   });
 
   // registro de nueva consulta///////////////////////////////////////////////////////////////
-  socket.on("service", async (NewService, id) => {
+  socket.on("service", async (NewService) => {
     //console.log("servicio", NewService);
     const { patientIdCard, patientType, queryType, user } = NewService;
     if (user === null && patientType === "Titular") {
@@ -446,17 +446,12 @@ io.on("connection", (socket) => {
           { new: true }
         );
         console.log("User created successfully: ", response);
-        let role =
-          queryType === "GENERAL"
-            ? "MEfDImCOuGEnNEeRfAmL"
-            : "MEfDImCOuEMnEReGEfNCmIA";
         const consultations = await MedicalConsultation.find({
           status: "Pendiente",
         })
           .populate("patient")
           .populate("user");
-        io.emit(id, consultations);
-        io.emit(role, consultations);
+        io.emit("services", consultations);
       } catch (error) {
         console.log("cath", error);
         if (error) {
