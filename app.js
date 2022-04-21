@@ -228,7 +228,6 @@ app.get("/fmunefm/consult", checkauth, async (req, res) => {
   try {
     const Users = await User.find().populate("beneficiaries.beneficiary");
     const Beneficiaries = await Beneficiary.find().populate("userId.user");
-    const result = [...Users, ...Beneficiaries];
     //const user = await User.find();
     //console.log("***", user);
 
@@ -240,11 +239,16 @@ app.get("/fmunefm/consult", checkauth, async (req, res) => {
 });
 
 app.get("/fmunefm/consultationspending", checkauth, async (req, res) => {
-  console.log(req.userData.id);
+  console.log("*****************", req.headers.role);
+  let object = {};
+  if (req.headers.role === "fRmEuCnEePfCmION") {
+    object = { status: "Pendiente" };
+  }
+  if (req.headers.role === "MEfDImCOuGEnNEeRfAmL") {
+    object = { status: "Pendiente", queryType: "GENERAL" };
+  }
   try {
-    const consultations = await MedicalConsultation.find({
-      status: "Pendiente",
-    })
+    const consultations = await MedicalConsultation.find(object)
       .populate("patient")
       .populate("user");
 
@@ -389,7 +393,7 @@ io.on("connection", (socket) => {
 
   // registro de nueva consulta///////////////////////////////////////////////////////////////
   socket.on("service", async (NewService) => {
-    console.log("servicio", NewService);
+    //console.log("servicio", NewService);
     const { patientIdCard, patientType, queryType, user } = NewService;
     if (user === null && patientType === "Titular") {
       const patientData = await User.findOne({
@@ -442,12 +446,17 @@ io.on("connection", (socket) => {
           { new: true }
         );
         console.log("User created successfully: ", response);
+        let role =
+          queryType === "GENERAL"
+            ? "MEfDImCOuGEnNEeRfAmL"
+            : "MEfDImCOuEMnEReGEfNCmIA";
         const consultations = await MedicalConsultation.find({
           status: "Pendiente",
         })
           .populate("patient")
           .populate("user");
         io.emit("services", consultations);
+        io.emit(role, consultations);
       } catch (error) {
         console.log("cath", error);
         if (error) {
