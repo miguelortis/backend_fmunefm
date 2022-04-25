@@ -388,7 +388,7 @@ const server = app.listen(process.env.PORT, () => {
 
 const io = SocketIo(server, {
   cors: {
-    origin: "https://fmunefm.vercel.app/",
+    origin: "*",
     methods: ["GET", "POST"],
   },
 });
