@@ -9,6 +9,7 @@ const _connect = require("./db/_connect");
 const { isValidEmail } = require("./helpers");
 const cors = require("cors");
 const checkauth = require("./midlewares/checkauth");
+//////////import socket////////////////
 const SocketIo = require("socket.io");
 ///////import models
 const User = require("./model/user");
@@ -101,7 +102,10 @@ app.post("/fmunefm/login", async (req, res) => {
   const user = await User.findOne({ idCard }).lean();
 
   if (!user) {
-    return res.json({ status: 204, error: "Invalid username/password" });
+    return res.json({
+      status: 204,
+      error: "Este usuario no se encuentra registrado",
+    });
   }
 
   if (!(await bcrypt.compare(password, user.password))) {
@@ -119,7 +123,7 @@ app.post("/fmunefm/login", async (req, res) => {
     },
     process.env.JWT_SECRET,
     {
-      expiresIn: 60 * 60 * 6, // seconds
+      expiresIn: 60 * 60 * 24, // seconds
     }
   );
 
@@ -224,7 +228,7 @@ app.get("/profile", checkauth, async (req, res) => {
 });
 
 app.get("/fmunefm/consult", checkauth, async (req, res) => {
-  console.log(req.userData.id);
+  //console.log(req.userData.id);
   try {
     const Users = await User.find().populate("beneficiaries.beneficiary");
     const Beneficiaries = await Beneficiary.find().populate("userId.user");
@@ -238,29 +242,29 @@ app.get("/fmunefm/consult", checkauth, async (req, res) => {
   }
 });
 
-app.get("/fmunefm/consultationspending", checkauth, async (req, res) => {
-  console.log("*****************", req.headers.role);
-  let object = {};
-  if (req.headers.role === "fRmEuCnEePfCmION") {
-    object = { status: "Pendiente" };
-  }
-  if (req.headers.role === "MEfDImCOuGEnNEeRfAmL") {
-    object = { status: "Pendiente", queryType: "GENERAL" };
-  }
-  try {
-    const consultations = await MedicalConsultation.find(object)
-      .populate("patient")
-      .populate("user");
+// app.get("/fmunefm/consultationspending", checkauth, async (req, res) => {
+//   //console.log("*****************", req.headers.role);
+//   let object = {};
+//   if (req.headers.role === "fRmEuCnEePfCmION") {
+//     object = { status: "Pendiente" };
+//   }
+//   if (req.headers.role === "MEfDImCOuGEnNEeRfAmL") {
+//     object = { status: "Pendiente", queryType: "GENERAL" };
+//   }
+//   try {
+//     const consultations = await MedicalConsultation.find(object)
+//       .populate("patient")
+//       .populate("user");
 
-    //const user = await User.find();
-    //console.log("***", user);
+//     //const user = await User.find();
+//     //console.log("***", user);
 
-    console.log("beneficiaries", consultations);
-    res.status(200).json(consultations);
-  } catch (error) {
-    return res.status(401).json({ message: "no autorizado" });
-  }
-});
+//     //console.log("beneficiaries", consultations);
+//     res.status(200).json(consultations);
+//   } catch (error) {
+//     return res.status(401).json({ message: "no autorizado" });
+//   }
+// });
 
 app.post("/fmunefm/beneficiary/register", checkauth, async (req, res) => {
   ///console.log("****", req);
@@ -321,7 +325,7 @@ app.post("/fmunefm/beneficiary/register", checkauth, async (req, res) => {
     //     error: "Ya tienes Este Miembro en tu carga familiar",
     //   });
     // } else {
-    console.log("try ", req.body);
+    //console.log("try ", req.body);
     const response = await Beneficiary.create({
       documentType,
       idCard,
@@ -331,7 +335,7 @@ app.post("/fmunefm/beneficiary/register", checkauth, async (req, res) => {
       dateBirth,
       userId: [{ user: req.userData.id, relationship: relationship }],
     });
-    console.log("despues de response", response);
+    //console.log("despues de response", response);
     await User.findByIdAndUpdate(
       { _id: req.userData.id },
       {
@@ -380,154 +384,152 @@ const server = app.listen(process.env.PORT, () => {
   console.log(`Server up at ${process.env.PORT}`);
 });
 
+////////////////////////////SOCKETS////////////////////////////////////////////
+
 const io = SocketIo(server);
 
-//Funcionalidad de socket.io en el servidor
-io.on("connection", (socket) => {
-  let nombre;
-  console.log("usuario conectado");
+let users = [];
 
-  socket.on("connected", (hola) => {
-    console.log("usuario conec", hola);
+const addUser = (userId, userRole, socketId) => {
+  !users.some((user) => user.userId === userId) &&
+    users.push({ userId, userRole, socketId });
+};
+
+const removeUser = (socketId) => {
+  users = users.filter((user) => user.socketId !== socketId);
+};
+
+const getUser = (userId) => {
+  return users.find((user) => user.userId === userId);
+};
+const getDoctorUser = (userRole) => {
+  return users.find((user) => user.userRole === userRole);
+};
+io.on("connection", (socket) => {
+  //when ceonnect
+  console.log("a user connected.");
+  console.log(users);
+
+  //take userId and socketId from user
+  socket.on("addUser", async (userId, userRole) => {
+    addUser(userId, userRole, socket.id);
+    io.emit("getUsers", users);
+    //verificar tipo de rol y mandar consultas pendientes
+    if (userRole === "fRmEuCnEePfCmION") {
+      const pendingConsultations = await MedicalConsultation.find({
+        status: "Pendiente",
+      })
+        .populate("patient")
+        .populate("user");
+      io.emit(userRole, pendingConsultations);
+    }
+    if (userRole === "MEfDImCOuGEnNEeRfAmL") {
+      const pendingConsultations = await MedicalConsultation.find({
+        status: "Pendiente",
+        queryType: "GENERAL",
+      })
+        .populate("patient")
+        .populate("user");
+      io.emit(userRole, pendingConsultations);
+    }
+    if (userRole === "MEfDImCOuEMnEReGEfNCmIA") {
+      const pendingConsultations = await MedicalConsultation.find({
+        status: "Pendiente",
+        queryType: "EMERGENCIA",
+      })
+        .populate("patient")
+        .populate("user");
+      io.emit(userRole, pendingConsultations);
+    }
   });
 
-  // registro de nueva consulta///////////////////////////////////////////////////////////////
-  socket.on("service", async (NewService) => {
-    //console.log("servicio", NewService);
-    const { patientIdCard, patientType, queryType, user } = NewService;
-    if (user === null && patientType === "Titular") {
-      const patientData = await User.findOne({
+  //guardar y enviar consultas pendientes
+  socket.on("service", async (consultation) => {
+    console.log("service", consultation);
+
+    const { patientIdCard, patientType, queryType, user } = consultation;
+
+    let patientData;
+    if (patientType === "Titular") {
+      patientData = await User.findOne({
         idCard: patientIdCard,
       });
-      if (
-        patientIdCard === null ||
-        patientType === null ||
-        queryType === null
-      ) {
-        return socket.emit(
-          "error",
-          "No puedes realizar mas de dos consultas por año"
-        );
-      }
-      // const consultations = await MedicalConsultation.find({
-      //   idCardPatient: patientData.idCard,
-      //   user: patientData._id,
-      // });
-      // let consultationsPerYear = 0;
-      // consultations.map((el) => {
-      //   if (el.registrationDate.getFullYear() === new Date().getFullYear()) {
-      //     consultationsPerYear++;
-      //   }
-      // });
-      // console.log(consultationsPerYear);
-      // console.log(consultations.length);
-      // if (consultations.length >= 2 && consultationsPerYear >= 2) {
-      //   return socket.emit(
-      //     "services",
-      //     "No puedes realizar mas de dos consultas por año"
-      //   );
-      // }
-      try {
-        const response = await MedicalConsultation.create({
-          patient: patientData._id,
-          idCardPatient: patientData.idCard,
-          patientType,
-          queryType,
-          user: patientData._id,
-        });
+    }
+    if (patientType === "Beneficiario") {
+      patientData = await Beneficiary.findOne({
+        idCard: patientIdCard,
+      });
+    }
 
-        await User.findByIdAndUpdate(
-          { _id: patientData._id },
-          {
-            $addToSet: {
-              medicalConsultations: mongoose.Types.ObjectId(response._id),
-            },
+    try {
+      const response = await MedicalConsultation.create({
+        patient: patientData._id,
+        idCardPatient: patientData.idCard,
+        patientType,
+        queryType,
+        user: patientType === "Titular" ? patientData._id : user,
+      });
+
+      await User.findByIdAndUpdate(
+        { _id: patientData._id },
+        {
+          $addToSet: {
+            medicalConsultations: mongoose.Types.ObjectId(response._id),
           },
-          { new: true }
-        );
-        console.log("User created successfully: ", response);
-        const consultations = await MedicalConsultation.find({
+        },
+        { new: true }
+      );
+      console.log("User created successfully: ", response);
+      //////Enviar todas las consultas a recepcion
+      const allPendingConsultations = await MedicalConsultation.find({
+        status: "Pendiente",
+      })
+        .populate("patient")
+        .populate("user");
+      io.emit("services", allPendingConsultations);
+      //////////Enviar todas las consultas de Emergencia al "doctor de Emergencia"
+      if (consultation?.queryType === "EMERGENCIA") {
+        const user = getDoctorUser("MEfDImCOuEMnEReGEfNCmIA");
+        const pendingConsultations = await MedicalConsultation.find({
           status: "Pendiente",
+          queryType: "EMERGENCIA",
         })
           .populate("patient")
           .populate("user");
-        io.emit("services", consultations);
-      } catch (error) {
-        console.log("cath", error);
-        if (error) {
-          return io.emit("error", "Ocurrio un problema");
-        }
+        io.to(user?.socketId).emit("consultations", pendingConsultations);
       }
-    } else {
-      const patientData = await Beneficiary.findOne({
-        idCard: patientIdCard,
-      });
-      if (
-        patientIdCard === null ||
-        patientType === null ||
-        queryType === null ||
-        user === null
-      ) {
-        return socket.emit("error", "Faltan datos, por favor verifique");
-      }
-
-      try {
-        const response = await MedicalConsultation.create({
-          patient: patientData._id,
-          idCardPatient: patientData.idCard,
-          patientType,
-          queryType,
-          user: user,
-        });
-
-        await Beneficiary.findByIdAndUpdate(
-          { _id: patientData._id },
-          {
-            $addToSet: {
-              medicalConsultations: mongoose.Types.ObjectId(response._id),
-            },
-          },
-          { new: true }
-        );
-        console.log("User created successfully: ", response);
-        const consultations = await MedicalConsultation.find({
+      //////////Enviar todas las consultas General al "doctor General"
+      if (consultation?.queryType === "GENERAL") {
+        const user = getDoctorUser("MEfDImCOuGEnNEeRfAmL");
+        const pendingConsultations = await MedicalConsultation.find({
           status: "Pendiente",
+          queryType: "GENERAL",
         })
           .populate("patient")
           .populate("user");
-        io.emit("services", consultations);
-      } catch (error) {
-        console.log("cath", error);
-        if (error) {
-          return io.emit("error", "Ocurrio un problema");
-        }
+        io.to(user?.socketId).emit("consultations", pendingConsultations);
+      }
+    } catch (error) {
+      console.log("cath", error);
+      if (error) {
+        return io.emit("error", "Ocurrio un Error con el servidor");
       }
     }
   });
 
-  //Funcionalidad de socket.io en el servidor
-  // io.on("connection", (socket) => {
-  //   let nombre;
+  //send and get message
+  socket.on("sendMessage", ({ senderId, receiverId, text }) => {
+    const user = getUser(receiverId);
+    io.to(user.socketId).emit("getMessage", {
+      senderId,
+      text,
+    });
+  });
 
-  //   socket.on("connect", (nomb) => {
-  //     nombre = nomb;
-  //     //socket.broadcast.emit manda el mensaje a todos los clientes excepto al que ha enviado el mensaje
-  //     socket.broadcast.emit("mensajes", {
-  //       nombre: nombre,
-  //       mensaje: `${nombre} ha entrado en la sala del chat`,
-  //     });
-  //   });
-
-  //   socket.on("mensaje", (nombre, mensaje) => {
-  //     //io.emit manda el mensaje a todos los clientes conectados al chat
-  //     io.emit("mensajes", { nombre, mensaje });
-  //   });
-
-  //   socket.on("disconnect", () => {
-  //     io.emit("mensajes", {
-  //       servidor: "Servidor",
-  //       mensaje: `${nombre} ha abandonado la sala`,
-  //     });
-  //   });
-  // });
+  //when disconnect
+  socket.on("disconnect", () => {
+    console.log("a user disconnected!");
+    removeUser(socket.id);
+    io.emit("getUsers", users);
+  });
 });
