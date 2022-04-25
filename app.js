@@ -386,7 +386,13 @@ const server = app.listen(process.env.PORT, () => {
 
 ////////////////////////////SOCKETS////////////////////////////////////////////
 
-const io = SocketIo(server);
+const io = SocketIo(server, {
+  cors: {
+    origin: "https://fmunefm.vercel.app/",
+    allowedHeaders: ["my-custom-header"],
+    credentials: true,
+  },
+});
 
 let users = [];
 
