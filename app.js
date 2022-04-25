@@ -386,12 +386,7 @@ const server = app.listen(process.env.PORT, () => {
 
 ////////////////////////////SOCKETS////////////////////////////////////////////
 
-const io = SocketIo(server, {
-  cors: {
-    origin: "*",
-    methods: ["GET", "POST"],
-  },
-});
+const io = SocketIo(server);
 
 let users = [];
 
