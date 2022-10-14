@@ -29,6 +29,10 @@ app.use((req, res, next) => {
 app.use(bodyParser.json());
 app.use('/', routes)
 
+const server = app.listen(process.env.PORT, () => {
+  console.log(`Server up at ${process.env.PORT}`);
+});
+
 ////////////////////////////SOCKETS////////////////////////////////////////////
 
 const io = SocketIo(server);
