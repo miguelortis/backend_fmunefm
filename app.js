@@ -1,4 +1,3 @@
-const mongoose = require('mongoose')
 const express = require('express')
 require('dotenv').config()
 const bodyParser = require('body-parser')
@@ -8,11 +7,6 @@ const routes = require('./routes')
 const cors = require('cors')
 //////////import socket////////////////
 const SocketIo = require('socket.io')
-///////import models
-const User = require('./models/User')
-const Beneficiary = require('./models/beneficiary')
-const MedicalConsultation = require('./models/MedicalConsultation')
-//const AccountsReceivableVerifier = require("./helpers/AccountsReceivableVerifier");
 ///////conxion con mongodb
 _connect()
 
