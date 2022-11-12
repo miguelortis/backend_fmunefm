@@ -5,7 +5,7 @@ const checkauth = require("../middlewares/checkauth");
 const { beneficiaryRegister, getDataBeneficiaries, beneficiaryUpdate, beneficiaryDelete } = require('../controllers/beneficiaryController')
 
 //beneficiary register
-router.post('/register', checkauth, beneficiaryRegister)
+router.post('', checkauth, beneficiaryRegister)
 
 //Get data beneficiary
 router.get('/data', checkauth)

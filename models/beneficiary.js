@@ -4,10 +4,12 @@ const BeneficiarySchema = mongoose.Schema({
   documentType: {
     type: String,
     required: true,
+    trim: true,
   },
   idCard: {
     type: String,
     required: true,
+    trim: true,
   },
   name: {
     type: String,
@@ -19,22 +21,22 @@ const BeneficiarySchema = mongoose.Schema({
     required: true,
     trim: true,
   },
-  sex: {
+  gender: {
     type: String,
     required: true,
+    upperCase: true,
+    trim: true,
   },
   dateBirth: {
-    type: String,
+    type: Date,
     required: true,
   },
-  registrationDate: {
-    type: Date,
-    default: Date.now(),
+  placeBirth: {
+    type: String,
     required: true,
   },
   phone: {
     type: String,
-    required: true,
   },
   userId: [
     {
@@ -52,11 +54,14 @@ const BeneficiarySchema = mongoose.Schema({
     },
   ],
   status: {
-    required: true,
     type: Boolean,
     default: false,
   },
-});
+},
+{
+  timestamps: true,
+  versionKey: false,
+  });
 
 const model = mongoose.model("beneficiary", BeneficiarySchema, "beneficiaries");
 

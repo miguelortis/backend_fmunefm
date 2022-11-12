@@ -6,7 +6,7 @@ const { getDataUser, getUserPackage, updateUser, userRegister } = require('../co
 
 
 //User register
-router.post('/register', userRegister)
+router.post('', userRegister)
 
 //Get user data
 router.get('/:userID', checkAuth, getDataUser)

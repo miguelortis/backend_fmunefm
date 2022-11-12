@@ -104,7 +104,6 @@ const UserSchema = mongoose.Schema({
   ], */
   unefmDate: {
     type: Date,
-    required: true,
   },
   //1: pendiente por verificar, 2: verificado, 3: rechazado, 4: suspendido
   status: {

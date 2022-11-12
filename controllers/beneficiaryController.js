@@ -11,99 +11,80 @@ const Beneficiary = require("../models/beneficiary");
 
 //Beneficiary register
 const beneficiaryRegister = async (req, res) => {
-    ///console.log("****", req);
-  const { documentType, idCard, name, lastName, relationship, sex, dateBirth } =
+  const { documentType, idCard, name, lastName, relationship, gender, dateBirth, placeBirth, phone } =
   req.body;
 
 const BeneficiaryVerify = await Beneficiary.findOne({
   idCard: idCard,
 });
-if (BeneficiaryVerify) {
-  await Beneficiary.findByIdAndUpdate(
-    { _id: BeneficiaryVerify._id },
-    {
-      $addToSet: {
-        userId: [
-          {
-            user: mongoose.Types.ObjectId(req.userData._id),
-            relationship: relationship,
-          },
-        ],
-      },
-    },
-    { new: true }
-  );
-  console.log('beneficiaryController 36', req.userData._id )
-  await User.findByIdAndUpdate(
-    { _id: req.userData._id },
-    {
-      $addToSet: {
-        beneficiaries: [
-          {
-            beneficiary: mongoose.Types.ObjectId(BeneficiaryVerify._id),
-            relationship: relationship,
-          },
-        ],
-      },
-    },
-    { new: true }
-  );
-  return res.status(200).json(BeneficiaryVerify);
-}
-
-if (idCard === req.userData.idCard) {
-  return res.status(401).send({
-    success: false,
-    error: "Eres titular no te puedes agregar a tu propia carga familiar",
-  });
-}
-
 try {
-  // const idCardVerify = await Beneficiary.findOne({
-  //   userId: req.userData.id,
-  //   idCard: req.body.idCard,
-  // });
-
-  // if (idCardVerify) {
-  //   return res.status(402).send({
-  //     success: false,
-  //     error: "Ya tienes Este Miembro en tu carga familiar",
-  //   });
-  // } else {
-  //console.log("try ", req.body);
-  const response = await Beneficiary.create({
-    documentType,
-    idCard,
-    name,
-    lastName,
-    sex,
-    dateBirth,
-    userId: [{ user: req.userData._id, relationship: relationship }],
-  });
-  //console.log("despues de response", response);
-  await User.findByIdAndUpdate(
-    { _id: req.userData._id },
-    {
-      $addToSet: {
-        beneficiaries: {
-          beneficiary: mongoose.Types.ObjectId(response._id),
-          relationship: relationship,
+  if (BeneficiaryVerify) {
+    await Beneficiary.findByIdAndUpdate(
+      { _id: BeneficiaryVerify._id },
+      {
+        $addToSet: {
+          userId: [
+            {
+              user: mongoose.Types.ObjectId(req.userData._id),
+              relationship: relationship,
+            },
+          ],
         },
       },
-    },
-    { new: true }
-  );
-  console.log("User created successfully: ", response);
-  return res
-    .status(200)
-    .json({ beneficiary: response, relationship: relationship });
-  // }
+      { new: true }
+    );
+    console.log('beneficiaryController 36', req.userData._id )
+    await User.findByIdAndUpdate(
+      { userName: req.userData.idCard },
+      {
+        $addToSet: {
+          beneficiaries: [
+            {
+              beneficiary: mongoose.Types.ObjectId(BeneficiaryVerify._id),
+              relationship: relationship,
+            },
+          ],
+        },
+      },
+      { new: true }
+    );
+    console.log("User created successfully: ");
+    return res.status(200).json({message: 'Beneficiario agregado a tu carga familiar'});
+  }else{    
+      const response = await Beneficiary.create({
+        documentType,
+        idCard,
+        name,
+        lastName,
+        gender,
+        dateBirth,
+        placeBirth,
+        phone,
+        userId: [{ user: req.userData._id, relationship: relationship }],
+      });
+      await User.findByIdAndUpdate(
+        { _id: req.userData._id },
+        {
+          $addToSet: {
+            beneficiaries: {
+              beneficiary: mongoose.Types.ObjectId(response._id),
+              relationship: relationship,
+            },
+          },
+        },
+        { new: true }
+      );
+      console.log("User created successfully: ");
+      return res
+        .status(200)
+        .json({ message: 'Beneficiario agregado a tu carga familiar' });
+  }
 } catch (error) {
   console.log("cath", error);
   if (error) {
     return res
       .status(400)
-      .send({ success: false, error: "Llene todos los campos" });
+      .send({ message: 'Beneficiario agregado a tu carga familiar' });
   }
   throw error;
 }

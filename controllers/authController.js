@@ -1,14 +1,15 @@
 const { httpError } = require('../helpers/handleError')
 const { tokenSign } = require('../helpers/generateToken')
 const bcrypt = require("bcryptjs");
-const moment = require("moment");
 const { isValidEmail } = require("../helpers");
 require('moment-timezone');
 // import models
 const User = require("../models/User");
+const OldUser = require('../models/oldUser')
 
 //User login!
 const loginCtrl = async (req, res) => {
+  console.log(req.body)
     try {
         const { idCard, password } = req.body;
        // const user = await User.findOne({ idCard }).lean();
@@ -52,7 +53,24 @@ const getUserDataAuth = async (req, res) => {
     }
 }
 
+// get old user
+const getOldUser = async(req, res) => {
+  console.log(req.params.idCard, '*')
+  try {
+    const user = await OldUser.findOne({cedula: req.params.idCard})
+    if (!user) {
+      return res.json({ status: 400, message: "Este usuario no se encuentra registrado"});
+    }
+    const dataToke = {idCard: user.cedula, _id: user._id}
+    const token = await tokenSign(dataToke);
+  
+    return res.json({status: 200, token: token});
+} catch (e) {
+    httpError(res, e)
+}
+}
 
 
 
-module.exports = { loginCtrl, getUserDataAuth }
+
+module.exports = { loginCtrl, getUserDataAuth, getOldUser }
