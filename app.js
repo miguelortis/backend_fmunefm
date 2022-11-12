@@ -4,9 +4,9 @@ const bodyParser = require('body-parser')
 const _connect = require('./config/_connect')
 const routes = require('./routes')
 /////// cors ///////////////
-const cors = require('cors')
+/* const cors = require('cors') */
 //////////import socket////////////////
-const SocketIo = require('socket.io')
+/* const SocketIo = require('socket.io') */
 ///////conxion con mongodb
 _connect()
 
@@ -26,7 +26,7 @@ app.use((req, res, next) => {
 app.use(bodyParser.json())
 app.use('/', routes)
 
-const server = app.listen(process.env.PORT, () => {
+app.listen(process.env.PORT, () => {
   console.log(`Server up at ${process.env.PORT}`)
 })
 
