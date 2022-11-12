@@ -1,40 +1,43 @@
-const mongoose = require("mongoose");
-const express = require("express");
-require("dotenv").config();
-const bodyParser = require("body-parser");
-const _connect = require("./config/_connect");
-const routes = require('./routes');
+const mongoose = require('mongoose')
+const express = require('express')
+require('dotenv').config()
+const bodyParser = require('body-parser')
+const _connect = require('./config/_connect')
+const routes = require('./routes')
 /////// cors ///////////////
-const cors = require("cors");
+const cors = require('cors')
 //////////import socket////////////////
-const SocketIo = require("socket.io");
+const SocketIo = require('socket.io')
 ///////import models
-const User = require("./models/User");
-const Beneficiary = require("./models/beneficiary");
-const MedicalConsultation = require("./models/MedicalConsultation");
+const User = require('./models/User')
+const Beneficiary = require('./models/beneficiary')
+const MedicalConsultation = require('./models/MedicalConsultation')
 //const AccountsReceivableVerifier = require("./helpers/AccountsReceivableVerifier");
 ///////conxion con mongodb
-_connect();
+_connect()
 
-const app = express();
+const app = express()
 //app.use(cors('*'));
 // Configurar cabeceras y cors
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Headers', 'Authorization, X-API-KEY, Origin, X-Requested-With, Content-Type, Accept, Access-Control-Allow-Request-Method');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, DELETE, PATCH');
-  res.header('Allow', 'GET, POST, OPTIONS, PUT, DELETE, PATCH');
-  next();
-});
-app.use(bodyParser.json());
+  res.header('Access-Control-Allow-Origin', '*')
+  res.header(
+    'Access-Control-Allow-Headers',
+    'Authorization, X-API-KEY, Origin, X-Requested-With, Content-Type, Accept, Access-Control-Allow-Request-Method'
+  )
+  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, DELETE, PATCH')
+  res.header('Allow', 'GET, POST, OPTIONS, PUT, DELETE, PATCH')
+  next()
+})
+app.use(bodyParser.json())
 app.use('/', routes)
 
 const server = app.listen(process.env.PORT, () => {
-  console.log(`Server up at ${process.env.PORT}`);
-});
+  console.log(`Server up at ${process.env.PORT}`)
+})
 
 ////////////////////////////SOCKETS////////////////////////////////////////////
-
+/* 
 const io = SocketIo(server);
 
 let users = [];
@@ -182,4 +185,4 @@ io.on("connection", (socket) => {
     removeUser(socket.id);
     io.emit("getUsers", users);
   });
-});
+}); */
